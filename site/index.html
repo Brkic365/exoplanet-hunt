@@ -1,0 +1,221 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Exoplanet Hunt</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="A TESS planet search written from scratch, and how well it works: injection-recovery, known-planet recall, a classifier, a CUDA search kernel, and every signal it found in sector 105.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@500;600&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500&display=swap">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="hero">
+  <div class="wrap" style="padding-block: clamp(2rem, 6vw, 4.5rem) 1.5rem; display: grid; gap: 1rem;">
+    <span class="eyebrow">TESS planet search · sectors 75 and 105</span>
+    <h1>Exoplanet Hunt</h1>
+    <p class="muted" style="max-width: 40rem; font-size: 1.08rem;">
+      A transit search written from scratch on NASA TESS light curves: ingest, detrend, search on the GPU,
+      vet, classify. Each point below is a star it searched. It found known planets on its own, it measured
+      what it misses, and in the newest sector it turned up no new candidate that survived vetting.
+    </p>
+  </div>
+  <div id="sky" class="sky">
+    <canvas class="gl" aria-label="Sky map of every star searched, coloured by classifier score"></canvas>
+    <canvas class="ov" aria-hidden="true"></canvas>
+    <div class="tip" hidden></div>
+  </div>
+  <div class="wrap">
+    <div class="legend">
+      <span><span class="sw" style="background:#8091b8"></span>searched, nothing survived</span>
+      <span>classifier score 0<span class="ramp"></span>1</span>
+      <span><span class="sw" style="background:var(--known)"></span>known TOI host</span>
+      <span><span class="sw" style="background:var(--accent); box-shadow:0 0 8px var(--accent)"></span>hand-vetted signal (click it)</span>
+      <span><span class="sw" style="background:#6b7899; opacity:.5"></span>other QLP targets, not searched</span>
+    </div>
+  </div>
+  <div class="stats">
+    <div class="stat"><span class="num">16,238</span><p>stars searched: 15,511 M and K dwarfs in sector 105 (2026) and 727 stars in sector 75 (2024)</p></div>
+    <div class="stat"><span class="num">93%</span><p>of 5,000 injected planets recovered when the transit SNR is 12 or more</p></div>
+    <div class="stat"><span class="num">0.93</span><p>classifier ROC AUC on held-out stars, planet vs false positive (BLS-statistics baseline: 0.78)</p></div>
+    <div class="stat"><span class="num">148 / s</span><p>stars searched per second by the CUDA kernel on a laptop GPU, 41× the reference CPU search</p></div>
+  </div>
+</header>
+
+<main>
+<section id="walk">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="eyebrow">One star, five stages</span>
+      <h2>From raw pixels to a verdict</h2>
+      <p>Scroll through one star's real data as the pipeline sees it. Pick a known planet, one of the lone dips from sector 105, or any glowing star on the map.</p>
+    </div>
+    <div class="picker" role="group" aria-label="Choose a star"></div>
+    <div class="walk">
+      <div class="walk-stage">
+        <div class="walk-head"><h3>TOI-1194.01</h3><span class="sub mono muted" style="font-size:.8rem"></span></div>
+        <div class="plot">
+          <canvas aria-label="Light curve chart for the selected star and stage"></canvas>
+          <div class="verdict" style="opacity:0"></div>
+        </div>
+        <div class="stages"></div>
+      </div>
+      <div class="steps">
+        <div class="step">
+          <span class="eyebrow">1 · Ingest</span>
+          <h3>Raw light curve</h3>
+          <p>MIT Quick-Look Pipeline photometry from MAST: the star's brightness every 200 seconds over one TESS sector, about 27 days. Cadences flagged for momentum dumps, scattered light or bad pointing are dropped.</p>
+          <p class="facts" data-fact="0"></p>
+        </div>
+        <div class="step">
+          <span class="eyebrow">2 · Detrend</span>
+          <h3>Remove the star's own wobble</h3>
+          <p>A sliding biweight filter with a 0.75-day window traces spots, rotation and spacecraft drift (the gold line), then divides it out. The window is wide enough to leave a transit of up to about 6 hours intact; injection tests chose it over 0.5, 1 and 1.5 days.</p>
+          <p class="facts" data-fact="1"></p>
+        </div>
+        <div class="step">
+          <span class="eyebrow">3 · Search</span>
+          <h3>Try every period</h3>
+          <p>A Box Least Squares search written from scratch folds the light curve at each trial period and scores the best box-shaped dip. The same algorithm runs as a CUDA kernel, one thread block per star and period. Lone dips get their own detector: a box slid along the light curve, scored against the star's own red noise.</p>
+          <p class="facts" data-fact="2"></p>
+        </div>
+        <div class="step">
+          <span class="eyebrow">4 · Fold</span>
+          <h3>Stack the transits</h3>
+          <p>Folding at the best period stacks every transit on top of each other, so a dip too faint to see once becomes clear. The fold uses a light curve re-detrended with the transits masked, so the filter cannot eat the dip being judged.</p>
+          <p class="facts" data-fact="3"></p>
+        </div>
+        <div class="step">
+          <span class="eyebrow">5 · Vet and classify</span>
+          <h3>Planet, or impostor?</h3>
+          <p>Automatic checks look for the usual impostors: odd and even transits of different depth, a secondary eclipse, light moving toward a neighbouring star. A CNN on the folded views and a gradient-boosted model on the vetting numbers, trained on 2,578 ExoFOP dispositions, give the score.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="heatmap">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="eyebrow">Sensitivity</span>
+      <h2>What it can and cannot find</h2>
+      <p>5,000 synthetic planets, limb-darkened and of known size and period, were planted in the raw light curves of 500 sector-75 stars with no known planet, then run through the whole pipeline. Each cell is the share recovered. Hover or tap a cell to see one injected planet the search found and one it missed.</p>
+    </div>
+    <div class="heat-grid">
+      <div class="heat"><div class="plot tall"><canvas tabindex="0" aria-label="Injection-recovery heatmap; use arrow keys to move between cells"></canvas></div></div>
+      <div class="heat-side">
+        <p class="cell-head mono" style="font-size:.85rem"></p>
+        <div class="mini ex-found"><div class="mini-head"></div><div class="plot"><canvas aria-label="Folded light curve of a recovered injection"></canvas></div></div>
+        <div class="mini ex-missed"><div class="mini-head"></div><div class="plot"><canvas aria-label="Folded light curve of a missed injection"></canvas></div></div>
+        <p class="muted" style="font-size:.85rem">Folded at the injected period. The dashed line is the injected depth, the shaded band the injected duration. Stars here are fairly faint (median T = 12.7), so small planets are lost in the noise, not thrown away.</p>
+      </div>
+    </div>
+    <div class="charts">
+      <div class="chart" id="chart-snr">
+        <h3>Recall against transit signal-to-noise</h3>
+        <p>The number that transfers to any star. <span style="color:var(--data)">Injections, TLS</span> · <span style="color:var(--accent)">injections, own BLS</span> at the same false-alarm rate · <span style="color:var(--known)">181 known TOIs in sector 75</span>.</p>
+        <div class="plot"><canvas aria-label="Recall versus expected SNR"></canvas></div>
+      </div>
+      <div class="chart" id="chart-single">
+        <h3>Lone transits</h3>
+        <p>3,000 single transits (P = 30 to 400 days) planted in the same stars, found by the single-event detector at SES ≥ 9. A periodic search cannot find any of them.</p>
+        <div class="plot"><canvas aria-label="Single-event recall versus SNR"></canvas></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="scores">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="eyebrow">Scoreboard</span>
+      <h2>The measured pipeline</h2>
+      <p>Known planets found blind, how well the classifier ranks signals, and how fast the search runs.</p>
+    </div>
+    <div class="board">
+      <div class="chart">
+        <h3>Known planets, found on its own</h3>
+        <div class="funnel">
+          <div class="row"><span>known TOIs in sector 75 with 2+ transits in the data</span><span class="num">181</span></div>
+          <div class="row"><span>recovered by period and epoch (TLS, SDE ≥ 9)</span><span class="num">79 · 44%</span></div>
+          <div class="row"><span>recall when the transit SNR is ≥ 12 and P ≤ 13.5 d</span><span class="num">91.5%</span></div>
+          <div class="row"><span>un-injected field stars that cross the threshold anyway</span><span class="num">2.8%</span></div>
+        </div>
+        <p>Most misses are below SNR 9 in one sector of data: 87 of the 181 TOIs. They need more sectors stacked, not a different search.</p>
+      </div>
+      <div class="chart">
+        <h3>Classifier, held-out stars</h3>
+        <p>ROC AUC, planet vs false positive, on 502 TOIs whose host stars were never in training.</p>
+        <div class="bars" id="bars-cls"></div>
+      </div>
+      <div class="chart">
+        <h3>Search speed</h3>
+        <p>Stars per second, 227 sector-75 stars, 2,479 trial periods each, search only.</p>
+        <div class="bars" id="bars-speed"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="candidates">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="eyebrow">Candidates · sector 105</span>
+      <h2>Everything worth a look, and why each was rejected</h2>
+      <p>The newest QLP sector on MAST, observed in mid-2026, with no TOIs from it yet. The search ran on every M and K dwarf bright enough for QLP photometry.</p>
+    </div>
+    <div class="board" style="grid-template-columns: minmax(0, 1fr); max-width: 46rem; margin-bottom: 2.5rem;">
+      <div class="funnel" id="funnel"></div>
+    </div>
+    <p class="status" style="margin-bottom: 2.5rem;"><b>Submission status: nothing submitted.</b> No signal survived hand-vetting as a new candidate, so no Community TOI went to ExoFOP. The two lone dips below are real but sit on stars that already have single-transit community TOIs.</p>
+    <div class="cand-groups" id="cands"></div>
+  </div>
+</section>
+
+<section id="writeup">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="eyebrow">Write-up</span>
+      <h2>What worked, what did not</h2>
+    </div>
+    <div class="writeup">
+      <div>
+        <h3>Worked</h3>
+        <ul>
+          <li><b>The search is at the noise limit.</b> Injected planets and known TOIs follow the same recall curve; the shallow planets it misses are too faint for one sector, not discarded by the pipeline.</li>
+          <li><b>A box is almost as good as a transit model.</b> The own BLS matches Transit Least Squares on the same 5,000 injections at the same false-alarm rate (26.2% vs 26.0%), and the CUDA version is 41× faster on the same laptop.</li>
+          <li><b>Vetting numbers beat a bigger network.</b> The hand-built checks lift AUC from 0.78 to 0.93; the CNN on folded light curves alone reaches 0.84.</li>
+          <li><b>The centroid check earns its place.</b> The strongest periodic signal in sector 105 looked like a 5 R⊕ planet; the centroid moved 22σ toward a neighbour that is an eclipsing binary in older sectors. The classifier gave it 0.07.</li>
+        </ul>
+      </div>
+      <div>
+        <h3>Did not, or not yet</h3>
+        <ul>
+          <li><b>Recent sectors are rough.</b> 90% of the 8,693 sector-105 detections were sector-wide systematics: orbit-start ramps and a noisy second orbit. Only a cross-star filter removed them.</li>
+          <li><b>An eclipsing binary's secondary looks like a second planet.</b> The first version masked "other signals" before vetting and hid the very secondaries it should catch.</li>
+          <li><b>Labels limit the classifier.</b> ExoFOP dispositions teach planet vs astrophysical false positive, not signal vs noise. Adding a noise class helped, but low SNR still needs a hard gate, and lone dips are judged by hand.</li>
+          <li><b>Not checked:</b> the T16 and transformer-search candidate tables, which were unreachable from the cloud environment. None of the 21 hand-vetted signals needed them.</li>
+        </ul>
+      </div>
+    </div>
+    <div class="prose" style="margin-top: 2.5rem;">
+      <p class="muted">Code, data products and every number on this page: <a href="https://github.com/Brkic365/exoplanet-hunt">github.com/Brkic365/exoplanet-hunt</a>. Anything the pipeline flags is a candidate; confirming a planet needs follow-up observations by others.</p>
+    </div>
+  </div>
+</section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>Data: TESS via the MIT Quick-Look Pipeline (MAST), ExoFOP-TESS TOI and CTOI tables, SPOC TCE catalogues.</span>
+    <span>Exoplanet Hunt · 2026</span>
+  </div>
+</footer>
+
+<script type="module" src="js/main.js"></script>
+</body>
+</html>
