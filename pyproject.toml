@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "exohunt"
+version = "0.1.0"
+description = "End-to-end TESS transit search: ingest, detrend, search, vet, classify."
+requires-python = ">=3.10"
+dependencies = [
+  "numpy",
+  "pandas",
+  "astropy",
+  "astroquery",
+  "requests",
+  "wotan",
+  "transitleastsquares",
+  "matplotlib",
+]
+
+[project.optional-dependencies]
+dev = ["pytest"]
+
+[project.scripts]
+exohunt = "exohunt.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
