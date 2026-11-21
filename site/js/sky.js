@@ -66,19 +66,18 @@ export async function initSky(root, { onPick, walkIds }) {
   const tip = root.querySelector(".tip");
   const [sky, back] = await Promise.all([
     fetch("data/sky.json").then((r) => r.json()),
-    fetch("data/backdrop.bin").then((r) => r.arrayBuffer()),
+    fetch("data/backdrop.json").then((r) => r.json()),
   ]);
 
   // ---- vertex data: backdrop first (drawn under), then searched stars
-  const nb = back.byteLength / 4;
-  const bra = new Uint16Array(back, 0, nb), bdec = new Int16Array(back, nb * 2, nb);
+  const nb = back.ra10.length;
   const n = sky.n, N = nb + n;
   const pos = new Float32Array(N * 2), size = new Float32Array(N), col = new Float32Array(N * 4),
     glow = new Float32Array(N), seed = new Float32Array(N);
   let rnd = 7;
   const rand = () => ((rnd = (rnd * 16807) % 2147483647) / 2147483647);
   for (let i = 0; i < nb; i++) {
-    const [x, y] = hammer((bra[i] / 65535) * 360, bdec[i] / 300);
+    const [x, y] = hammer(back.ra10[i] / 10, back.dec10[i] / 10);
     pos.set([x, y], i * 2);
     size[i] = 1.1;
     col.set([0.42, 0.47, 0.6, 0.16], i * 4);

@@ -13,7 +13,7 @@ cd site && python -m http.server 8000   # http://localhost:8000
 
 | section | module | data |
 |---|---|---|
-| sky map of every star searched (WebGL points, coloured by classifier score; glowing stars open the walkthrough) | `js/sky.js` | `data/sky.json`, `data/backdrop.bin` |
+| sky map of every star searched (WebGL points, coloured by classifier score; glowing stars open the walkthrough) | `js/sky.js` | `data/sky.json`, `data/backdrop.json` |
 | one star, five stages (raw → detrended → periodogram / single-event scan → fold → verdict), driven by scroll | `js/walkthrough.js` | `data/stars.json`, `data/stars/<tic>.json` |
 | injection-recovery heatmap with a found and a missed example per cell, recall vs SNR | `js/heatmap.js`, `js/results.js` | `data/heatmap.json`, `data/metrics.json` |
 | scoreboard (known-TOI recall, classifier AUC, search speed) and the 21 hand-vetted sector-105 signals | `js/results.js` | `data/metrics.json`, `data/stars.json`, `data/sheets/*.png` |

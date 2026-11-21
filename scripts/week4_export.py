@@ -4,7 +4,7 @@
     python scripts/week4_export.py stars      # only the per-star walkthrough files
 
 Writes
-  backdrop.bin    faint backdrop: other QLP targets of the same sectors (not searched)
+  backdrop.json   faint backdrop: other QLP targets of the same sectors (not searched)
   sky.json        every star searched (RA, Dec, T mag, best classifier score, class)
   stars/<tic>.json one file per walkthrough star: raw flux, trend, detrended flux,
                   periodogram (or single-event statistic), folded dip, verdict
@@ -277,7 +277,7 @@ def export_sky():
 
 def export_backdrop(n_per_sector=30000, seed=1):
     """Faint backdrop: a random subset of the other QLP targets in sectors 75 and 105
-    (not searched), packed as uint16 RA (0..360) + int16 Dec (x 300)."""
+    (not searched), as integer tenths of a degree."""
     rng = np.random.default_rng(seed)
     parts = []
     for sec in (75, 105):
@@ -285,10 +285,9 @@ def export_backdrop(n_per_sector=30000, seed=1):
         t.columns = ["tic", "ra", "dec"]
         parts.append(t.iloc[rng.choice(len(t), min(n_per_sector, len(t)), replace=False)])
     t = pd.concat(parts)
-    ra = np.round(t.ra.to_numpy() / 360 * 65535).astype("<u2")
-    dec = np.round(t.dec.to_numpy() * 300).astype("<i2")
-    p = OUT / "backdrop.bin"
-    p.write_bytes(ra.tobytes() + dec.tobytes())
+    p = OUT / "backdrop.json"
+    p.write_text(json.dumps({"ra10": np.round(t.ra.to_numpy() * 10).astype(int).tolist(),
+                             "dec10": np.round(t.dec.to_numpy() * 10).astype(int).tolist()}, separators=(",", ":")))
     print(f"{p.relative_to(ROOT)}  {p.stat().st_size / 1024:.0f} kB ({len(t)} stars)")
 
 
