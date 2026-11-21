@@ -14,6 +14,9 @@ G, L = V["global_view"], V["local_view"]
 
 # --- classifier: mean of CNN (views + vetting) and gradient boosting (vetting) -----------------
 tr = pd.read_csv(config.DATA_DIR / "training" / "tois_features.csv")
+noise_csv = config.DATA_DIR / "training" / "noise_features.csv"
+if noise_csv.exists():  # same training data as the CNN (scripts/week3_train.py)
+    tr = pd.concat([tr, pd.read_csv(noise_csv)], ignore_index=True)
 gbm = HistGradientBoostingClassifier(max_iter=300, learning_rate=0.05, max_leaf_nodes=15, l2_regularization=1.0,
                                      random_state=0).fit(scalar_matrix(tr[tr.split != "test"], VET_FEATURES),
                                                          tr.label[tr.split != "test"])

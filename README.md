@@ -94,19 +94,20 @@ recent sectors at the (re-centred) TOI ephemeris. The split is by host star
 
 The CNN ([`classify/model.py`](src/exohunt/classify/model.py)) is a two-tower
 1-D conv net (global and local columns, 151k parameters), 5 seeds, trained in a
-few minutes on CPU. Held-out stars, 502 TOIs:
+few minutes on CPU. The table is planet vs false positive on held-out stars
+(502 TOIs); the models are also trained on a noise class, below.
 
 ![Precision-recall curves](results/classifier/pr_curves.png)
 
 | model | inputs | ROC AUC | avg. precision | precision / recall at 0.5 | recall at 90% precision |
 |---|---|---|---|---|---|
-| logistic regression | BLS stats (P, duration, depth, SNR, n transits) | 0.67 | 0.60 | 0.59 / 0.60 | 0% |
-| gradient boosting | BLS stats | 0.79 | 0.72 | 0.68 / 0.70 | 0% |
+| logistic regression | BLS stats (P, duration, depth, SNR, n transits) | 0.67 | 0.61 | 0.61 / 0.52 | 0% |
+| gradient boosting | BLS stats | 0.78 | 0.72 | 0.68 / 0.67 | 0% |
 | vetting rules | pass/fail flags | | | 0.53 / 0.74 | |
-| CNN | folded views only | 0.85 | 0.79 | 0.72 / 0.83 | 3% |
-| gradient boosting | BLS stats + vetting numbers | 0.93 | 0.91 | 0.84 / 0.90 | 62% |
-| CNN | views + vetting numbers | 0.92 | 0.90 | 0.78 / 0.89 | 62% |
-| **mean of the two above (used)** | | **0.935** | **0.92** | **0.82 / 0.90** | **67%** |
+| CNN | folded views only | 0.84 | 0.78 | 0.71 / 0.78 | 2% |
+| gradient boosting | BLS stats + vetting numbers | 0.93 | 0.90 | 0.84 / 0.89 | 53% |
+| CNN | views + vetting numbers | 0.91 | 0.88 | 0.80 / 0.87 | 57% |
+| **mean of the two above (used)** | | **0.93** | **0.91** | **0.83 / 0.90** | **49%** |
 
 What this says: the folded light curve alone beats the plain BLS-statistics
 baseline (AUC 0.85 vs 0.79), and the hand-built vetting numbers are worth as
@@ -115,10 +116,20 @@ strongest single features are implied radius, SNR, Teff and the duration ratio.
 The pass/fail vetting rules are weak on TOIs (precision 0.53) because the easy
 false positives never became TOIs; they matter more on raw detections.
 
-**Known limitation:** every training example is a real astrophysical signal,
-so the classifier has never seen pure noise and happily gives SNR-6 noise high
-scores. The hunt therefore requires SNR ≥ 10 before ranking; adding a noise
-class (detections in un-injected stars) is the obvious next step.
+**Noise class.** TOI labels teach planet vs astrophysical false positive, never
+signal vs noise, so the first version gave SNR-6 noise on M dwarfs high scores.
+Training now adds 1,249 "noise" signals: everything the full hunt reports on
+2,069 stars with no TOI or CTOI (the 500 sector-75 field stars, 1,000 random
+sector-103 targets, and 569 M/K dwarfs from sector 104 picked like the
+sector-105 sample) ([`build_noise_set.py`](scripts/build_noise_set.py),
+[`build_noise_set_mk.py`](scripts/build_noise_set_mk.py)). Planet vs false
+positive is unchanged (AUC 0.93), planet vs noise on held-out stars is 0.999
+([metrics](results/classifier/metrics_test_planet_vs_noise.csv)), and on
+sector 105 the number of vetted SNR < 10 signals scoring ≥ 0.5 fell from
+69 to 22. It does not fall to zero, and it cannot: many real TOI planets also
+have single-sector QLP SNR of 5 to 8, so low SNR is not evidence of noise to a
+classifier trained on them. The SNR ≥ 10 gate before hand-vetting stays; it
+matches injection-recovery, where recall is under 40% below SNR 9 anyway.
 
 ### Sector 105: M and K dwarfs
 
@@ -139,7 +150,7 @@ single-event search (SES ≥ 9), vetting, views, classifier. About an hour on
 | … with SNR ≥ 10 → hand-vetted | **21** |
 
 Sanity check on the 43 known TOIs (CP/KP/PC/APC) on sample stars: 19 are
-recovered by period, with a median classifier score of 0.89; the misses are
+recovered by period, with a median classifier score of 0.71 (14 of 19 score ≥ 0.5); the misses are
 mostly long periods and depths near 1,000 ppm.
 
 **Hand-vetting** ([sheets](results/s0105/sheets/), verdicts in

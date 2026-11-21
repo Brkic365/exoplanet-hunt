@@ -18,11 +18,18 @@ from exohunt.classify import BLS_FEATURES, VET_FEATURES, scalar_matrix
 from exohunt.classify.model import Ensemble, train_cnn
 
 torch.set_num_threads(4)
-N_SEEDS = int(sys.argv[1]) if len(sys.argv) > 1 else 5
+N_SEEDS = int(sys.argv[1]) if len(sys.argv) > 1 and sys.argv[1].isdigit() else 5
 out = Path("results/classifier"); out.mkdir(parents=True, exist_ok=True)
-df = pd.read_csv(config.DATA_DIR / "training" / "tois_features.csv")
+df = pd.read_csv(config.DATA_DIR / "training" / "tois_features.csv").assign(kind="toi")
 V = np.load(config.DATA_DIR / "training" / "tois_views.npz")
 G, L = V["global_view"], V["local_view"]
+# noise class: every signal the hunt reports on stars without a TOI (scripts/build_noise_set.py)
+noise_csv = config.DATA_DIR / "training" / "noise_features.csv"
+if noise_csv.exists() and "--no-noise" not in sys.argv:
+    dn = pd.read_csv(noise_csv)
+    Vn = np.load(config.DATA_DIR / "training" / "noise_views.npz")
+    df = pd.concat([df, dn], ignore_index=True)
+    G, L = np.concatenate([G, Vn["global_view"]]), np.concatenate([L, Vn["local_view"]])
 y = df["label"].to_numpy(int)
 tr, va, te = (np.where(df["split"] == s)[0] for s in ("train", "val", "test"))
 trva = np.concatenate([tr, va])
@@ -68,7 +75,12 @@ rows = {k: metrics(p, te) for k, p in preds.items()}
 mt = pd.DataFrame(rows).T
 print(mt.round(3).to_string())
 mt.to_csv(out / "metrics_test.csv")
-pd.DataFrame({"toi": df.toi, "tic": df.tic, "label": y, "split": df.split, "disposition": df.disposition,
+kind = df["kind"].to_numpy()
+for name, keep in (("planet_vs_fp", kind[te] == "toi"), ("planet_vs_noise", (kind[te] == "noise") | (y[te] == 1))):
+    m2 = pd.DataFrame({k: metrics(p, te[keep]) for k, p in preds.items()}).T
+    print(name); print(m2.round(3).to_string())
+    m2.to_csv(out / f"metrics_test_{name}.csv")
+pd.DataFrame({"toi": df.toi, "tic": df.tic, "kind": df.kind, "label": y, "split": df.split, "disposition": df.disposition,
               **{k: np.round(v, 4) for k, v in preds.items()}}).to_csv(out / "predictions.csv", index=False)
 
 import matplotlib; matplotlib.use("Agg"); import matplotlib.pyplot as plt
@@ -83,5 +95,5 @@ r = rows["vet_rules"]
 ax.plot(r["recall_at_0p5"], r["precision_at_0p5"], "ko", label="Vetting rules (pass/fail)")
 ax.axhline(y[te].mean(), color="0.7", ls=":", lw=1)
 ax.set_xlabel("recall (confirmed/known planets)"); ax.set_ylabel("precision"); ax.set_ylim(0.4, 1.01)
-ax.set_title(f"Held-out stars: {len(te)} TOIs ({int(y[te].sum())} planets)")
+ax.set_title(f"Held-out stars: {len(te)} signals ({int(y[te].sum())} planets)")
 ax.legend(fontsize=8, loc="lower left"); fig.tight_layout(); fig.savefig(out / "pr_curves.png", dpi=150)
