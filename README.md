@@ -123,15 +123,25 @@ the box costs little.
 
 **Speed** (227 TOI hosts, median 11,205 points, 2,479 trial periods, search only):
 
-| backend | hardware | stars / s |
-|---|---|---|
-| TLS (reference) | 4 CPU cores | 5.9 |
-| own BLS, numba | 4 CPU cores | 23.7 (4.0×) |
-| own BLS, CUDA | NVIDIA GPU | *not measured yet: no GPU in the dev environment* |
+| backend | hardware | stars / s | vs TLS |
+|---|---|---|---|
+| TLS (reference) | 4-core cloud VM | 5.9 | 1× |
+| own BLS, numba | 4-core cloud VM | 23.7 | 4.0× |
+| TLS (reference) | laptop, 16 threads | 3.6 | 1× |
+| own BLS, numba | laptop, 16 threads | 52.0 | 14× |
+| **own BLS, CUDA** | **RTX 4050 Laptop GPU** | **148** | **41×** |
 
-The CUDA kernel is tested against the CPU path in numba's CUDA simulator
-(periodograms agree to < 10⁻⁴ relative, float32 vs float64), but a simulator
-says nothing about speed. To benchmark it on a machine with an NVIDIA GPU:
+On the same laptop the CUDA kernel is 2.9× faster than the numba CPU BLS and
+returns the same best periods (both agree with TLS on 69% of stars; TLS uses a
+different, limb-darkened statistic). Throughput is the same for 100 and 227
+stars (149 vs 148 stars/s), so launch and copy overhead are negligible and
+the kernel is compute-bound. Reading and detrending now cost more than the GPU
+search (~44 stars/s on one core), so parallelising that step is the next speed-up,
+not a C++ rewrite: numba already compiles the kernel to the same PTX/SASS nvcc would.
+The kernel-vs-CPU test also passes on the real device (`EXOHUNT_REAL_CUDA=1`).
+Raw numbers: [`benchmark_cpu4.csv`](results/s0075/benchmark_cpu4.csv), [`benchmark_gpu.csv`](results/s0075/benchmark_gpu.csv).
+
+To reproduce on a machine with an NVIDIA GPU:
 
 ```bash
 pip install -e .[dev,gpu]                 # adds numba-cuda (CUDA 12)
@@ -240,7 +250,7 @@ src/exohunt/
 ## Plan
 
 1. ~~Week 1: rediscover known planets on one sector (CPU TLS)~~
-2. ~~Week 2: injection-recovery harness, known-TOI recall, own BLS with CUDA kernel~~ (GPU timing still to run; vetting moves to week 3)
+2. ~~Week 2: injection-recovery harness, known-TOI recall, own BLS with CUDA kernel (41× TLS on an RTX 4050)~~ (vetting moves to week 3)
 3. Week 3: vetting (odd/even, secondary, centroid, momentum dumps), AstroNet-style CNN on ExoFOP dispositions, recent sectors, single-transit / long-period detector
 4. Week 4: portfolio page and any CTOI submission
 
