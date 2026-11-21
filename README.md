@@ -8,7 +8,16 @@ pointed at sectors and stars that have had few independent searches.
 Anything this pipeline flags is a *candidate*. Confirmation needs follow-up
 observations by others.
 
-## Status: week 3 (vet, classify, search a recent sector)
+## Status: week 4 (portfolio page)
+
+[`site/`](site/) is a static page built from the results below: a WebGL sky map of
+every star searched (16,238), a scroll-driven walkthrough of one star's real data
+through all five stages, the injection-recovery heatmap with a found and a missed
+example per cell, the scoreboard, and the 21 hand-vetted sector-105 signals with
+their vetting sheets. Data comes from [`scripts/week4_export.py`](scripts/week4_export.py);
+see [`site/README.md`](site/README.md) to run it or move it into another site.
+
+## Week 3: vet, classify, search a recent sector
 
 Week 3 adds the last two pipeline stages (automatic vetting and a classifier),
 a dedicated single-transit detector, and points the whole thing at **sector 105**
