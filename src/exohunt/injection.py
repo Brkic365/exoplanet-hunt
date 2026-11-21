@@ -104,7 +104,7 @@ def run_injection(inj: Injection, path: Path, searcher: str = "tls", window_leng
     lc = ingest.read_qlp(path, flux_column=flux_column)
     model, dur = transit_model(lc.time, inj)
     depth_inj = float(1 - model.min())
-    raw = LightCurve(lc.tic, lc.time, lc.flux * model, lc.flux_err, list(lc.sectors), dict(lc.meta))
+    raw = lc.subset(np.arange(len(lc)), flux=lc.flux * model)
     if detrend_method == "none":
         flat = raw
     else:

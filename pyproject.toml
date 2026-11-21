@@ -23,6 +23,7 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = ["pytest"]
+ml = ["torch", "scikit-learn"]  # classifier (week 3)
 gpu = ["numba-cuda[cu12]", "numpy<2.5"]  # numba-cuda 0.30 still calls np.row_stack (removed in numpy 2.5)  # CUDA BLS kernel; needs an NVIDIA GPU + driver
 
 [project.scripts]

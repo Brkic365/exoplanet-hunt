@@ -35,5 +35,4 @@ def detrend(
     resid = flat[ok] - np.median(flat[ok])
     mad = 1.4826 * np.median(np.abs(resid))
     ok[ok] = resid < sigma_upper * mad
-    out = LightCurve(lc.tic, lc.time[ok], flat[ok], lc.flux_err[ok], list(lc.sectors), dict(lc.meta))
-    return out, trend
+    return lc.subset(ok, flux=flat), trend
