@@ -88,3 +88,31 @@ def expected_transits(time, period, epoch_btjd, duration_d, min_coverage=0.5):
         if (hi - lo) * cad >= min_coverage * duration_d:
             count += 1
     return count
+
+
+def qlp_field_stars(sector: int, ra_ranges=((150, 152), (30, 31), (260, 261)), path: Path | None = None) -> pd.DataFrame:
+    """Every QLP target of `sector` inside a few RA strips, with TIC Tmag, radius,
+    mass and Teff. Used as host stars for injection tests (cached as CSV)."""
+    import numpy as np
+    from astroquery.mast import Catalogs, Observations
+
+    config.ensure_dirs()
+    path = path or config.CATALOG_DIR / f"qlp_s{sector:04d}_field.csv"
+    if path.exists():
+        return pd.read_csv(path)
+    rows = []
+    for ra in ra_ranges:
+        t = Observations.query_criteria(provenance_name="QLP", sequence_number=sector, s_ra=list(ra))
+        rows.append(pd.DataFrame({"tic": np.array(t["target_name"]).astype(int), "ra": np.array(t["s_ra"]),
+                                  "dec": np.array(t["s_dec"])}))
+    df = pd.concat(rows).drop_duplicates("tic")
+    ids = list(df["tic"].astype(str))
+    out = []
+    for i in range(0, len(ids), 500):
+        c = Catalogs.query_criteria(catalog="Tic", ID=ids[i:i + 500])
+        out.append(pd.DataFrame({k: np.array(c[c_], float) for k, c_ in
+                                 (("tmag", "Tmag"), ("rad", "rad"), ("mass", "mass"), ("teff", "Teff"))}
+                                ).assign(tic=np.array(c["ID"]).astype(int)))
+    df = df.merge(pd.concat(out), on="tic")
+    df.to_csv(path, index=False)
+    return df

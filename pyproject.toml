@@ -16,10 +16,14 @@ dependencies = [
   "wotan",
   "transitleastsquares",
   "matplotlib",
+  "scipy",
+  "numba",
+  "batman-package",
 ]
 
 [project.optional-dependencies]
 dev = ["pytest"]
+gpu = ["numba-cuda[cu12]"]  # CUDA BLS kernel; needs an NVIDIA GPU + driver
 
 [project.scripts]
 exohunt = "exohunt.cli:main"
