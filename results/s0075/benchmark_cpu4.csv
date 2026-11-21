@@ -1,0 +1,3 @@
+backend,workers,n,seconds,stars_per_s,same_period_as_tls_cpu,n_points_median,n_periods
+tls_cpu,4,227,38.43276574800029,5.906418535902822,1.0,11205,2479
+bls_cpu_numba,4,227,9.59423406499991,23.660043987055065,0.6872246696035242,11205,2479

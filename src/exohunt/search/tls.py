@@ -43,6 +43,7 @@ def tls_search(
             M_star_min=min(0.1, M_star),
             M_star_max=max(1.0, M_star),
             duration_grid_step=duration_grid_step,
+            n_transits_min=min_transits,
             use_threads=threads,
             show_progress_bar=False,
         )
