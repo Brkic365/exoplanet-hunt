@@ -8,7 +8,201 @@ pointed at sectors and stars that have had few independent searches.
 Anything this pipeline flags is a *candidate*. Confirmation needs follow-up
 observations by others.
 
-## Status: week 2 (measure it)
+## Status: week 3 (vet, classify, search a recent sector)
+
+Week 3 adds the last two pipeline stages (automatic vetting and a classifier),
+a dedicated single-transit detector, and points the whole thing at **sector 105**
+(observed mid-2026, the newest QLP sector on MAST, no TOIs from it yet).
+
+**Headline:** on 15,511 M and K dwarfs in sector 105 the pipeline produced
+8,693 signals; the systematics filter, vetting and classifier cut them to 21
+unknown signals worth a look, and **hand-vetting rejected every one as a new
+candidate.** The two strongest lone dips both landed on stars that already
+host single-transit community TOIs, years after their first transit: a fair
+check that the detector finds real things, and a new transit epoch for one of
+them. No CTOI submission this week.
+
+### Vetting (stage 4)
+
+[`vetting.py`](src/exohunt/vetting.py) re-detrends each signal with its own
+transits masked (so the filter never eats the dip being judged), masks the
+star's *other* signals unless they are harmonics of this one (an eclipsing
+binary's secondary is often found as a "second planet" at the same period),
+and measures:
+
+| check | catches | flag |
+|---|---|---|
+| odd vs even transit depth | eclipsing binary found at half its period | `oddeven` (> 3σ) |
+| best dip elsewhere in phase, and at phase 0.5 | secondary eclipse | `secondary` (look-elsewhere corrected) |
+| in-transit shift of the QLP flux centroid (`SAP_X/Y`) and the implied source offset | light from a neighbouring star | `centroid` (> 4σ and > 1 px) |
+| transits within one duration of a reaction-wheel momentum dump (QUALITY bit 32) | pointing systematics | `dump` |
+| one event carrying most of the SNR | outlier, not periodic | `oneevent` |
+| implied radius from depth and TIC R★ | stellar companion | `toobig` (> 30 R⊕) |
+| duration vs. the longest circular orbit allowed by TIC ρ★ | wrong star / giant / EB | `toolong` |
+| scatter around the dip vs. the whole light curve | dip sits in a bad stretch | `noisy` (> 1.5×) |
+| lone dip in the first day of a data segment | orbit-start ramps | `edge` |
+
+Every check also returns its number (red-noise-corrected σ), which the
+classifier uses as a feature. On the sector-75 detections that match known TOIs:
+
+| group | n | flagged | odd/even | secondary | centroid |
+|---|---|---|---|---|---|
+| known false positives (FP) | 42 | **45%** | 19% | 10% | 19% |
+| candidates (PC/APC) | 55 | 25% | 5% | 2% | 4% |
+| confirmed / known planets (CP/KP) | 25 | **12%** | 0% | 4% | 4% |
+
+The three flagged planets are a third planet of TOI-1339 posing as a secondary
+(we only search two signals per star), a 3.6 px centroid shift on TOI-1174.01,
+and one orbit-edge case. Most of the FPs that pass were ruled out by TFOP with
+ground-based imaging and spectroscopy, at scales TESS's 21″ pixels cannot see.
+Table: [`results/s0075/vetting_known.csv`](results/s0075/vetting_known.csv).
+
+### Single-transit detector
+
+[`search/single.py`](src/exohunt/search/single.py) slides boxes of 1 to 16 h
+along the detrended light curve (a 2 d biweight for boxes over 4.5 h so long
+transits survive) and scores each box by its depth over the robust scatter of
+*all* box depths of that duration in the same star, which prices in red noise.
+Periodic signals are masked first; each event is re-measured on a light curve
+detrended with the event masked.
+
+![Single-event recall](results/s0075/figures/single_event_recall.png)
+
+3,000 lone transits (P = 30 to 400 d, one transit in the data, 1.5 to 16 R⊕)
+planted in the 500 week-2 field stars: **77% recovered at expected SNR 20 to 30,
+91% above 50** with the SES ≥ 9 threshold, which 7.6% of un-injected stars also
+cross (systematics, flares, variability). Recall holds up for long transits:
+87% for 8 to 12 h, 73% above 12 h at SNR ≥ 15. On real data it finds **17 of the
+54 sector-75 TOIs that show exactly one transit**, all the deep ones; the
+misses are shallower than the noise allows, as for the periodic search.
+Tables: [`single_events.csv`](results/s0075/injections/single_events.csv),
+[`single_event_tois.csv`](results/s0075/single_event_tois.csv).
+
+### Classifier (stage 5)
+
+Training labels are every ExoFOP TOI with a TFOPWG disposition and T ≤ 13.5:
+**2,578 signals**, 1,261 confirmed/known planets (CP/KP) vs 1,317 false
+positives / false alarms (FP/FA), each from QLP light curves of its two most
+recent sectors at the (re-centred) TOI ephemeris. The split is by host star
+(70/10/20), so no star is on both sides. Inputs, after Shallue & Vanderburg
+(2018):
+
+* global view (201 bins over the orbit) and a local view (61 bins over ±2
+  durations) with channels for all, odd and even transits, the strongest
+  secondary dip, and centroid motion; [`views.py`](src/exohunt/views.py)
+* 20 scalars: the BLS statistics plus the vetting numbers above and T, Teff, R★
+
+The CNN ([`classify/model.py`](src/exohunt/classify/model.py)) is a two-tower
+1-D conv net (global and local columns, 151k parameters), 5 seeds, trained in a
+few minutes on CPU. Held-out stars, 502 TOIs:
+
+![Precision-recall curves](results/classifier/pr_curves.png)
+
+| model | inputs | ROC AUC | avg. precision | precision / recall at 0.5 | recall at 90% precision |
+|---|---|---|---|---|---|
+| logistic regression | BLS stats (P, duration, depth, SNR, n transits) | 0.67 | 0.60 | 0.59 / 0.60 | 0% |
+| gradient boosting | BLS stats | 0.79 | 0.72 | 0.68 / 0.70 | 0% |
+| vetting rules | pass/fail flags | | | 0.53 / 0.74 | |
+| CNN | folded views only | 0.85 | 0.79 | 0.72 / 0.83 | 3% |
+| gradient boosting | BLS stats + vetting numbers | 0.93 | 0.91 | 0.84 / 0.90 | 62% |
+| CNN | views + vetting numbers | 0.92 | 0.90 | 0.78 / 0.89 | 62% |
+| **mean of the two above (used)** | | **0.935** | **0.92** | **0.82 / 0.90** | **67%** |
+
+What this says: the folded light curve alone beats the plain BLS-statistics
+baseline (AUC 0.85 vs 0.79), and the hand-built vetting numbers are worth as
+much as the CNN's view of the light curve; the two together are best. The
+strongest single features are implied radius, SNR, Teff and the duration ratio.
+The pass/fail vetting rules are weak on TOIs (precision 0.53) because the easy
+false positives never became TOIs; they matter more on raw detections.
+
+**Known limitation:** every training example is a real astrophysical signal,
+so the classifier has never seen pure noise and happily gives SNR-6 noise high
+scores. The hunt therefore requires SNR ≥ 10 before ranking; adding a noise
+class (detections in un-injected stars) is the obvious next step.
+
+### Sector 105: M and K dwarfs
+
+Sample: every QLP sector-105 target classed as a dwarf with Teff < 3,900 K and
+T ≤ 13.5 (**7,152 M dwarfs**) or 3,900 to 5,300 K and T ≤ 12 (**8,359 K
+dwarfs**). Each star: biweight detrend, own BLS (up to 2 signals, SDE ≥ 6),
+single-event search (SES ≥ 9), vetting, views, classifier. About an hour on
+4 cloud cores ([`hunt.py`](src/exohunt/hunt.py), [`scripts/week3_hunt.py`](scripts/week3_hunt.py),
+[`scripts/week3_score.py`](scripts/week3_score.py)).
+
+| step | signals |
+|---|---|
+| detected (1,943 periodic + 6,750 single events) | 8,693 |
+| sector-wide systematics: lone dips bunched in time across many stars (orbit starts, scattered light), or periods shared by ≥ 8 stars (6.59 d) | −7,800 |
+| fail vetting | −3,368 (overlapping) |
+| pass everything | 149 |
+| … and not on a TOI host, not matching a TOI / CTOI / SPOC TCE period | 135 |
+| … with SNR ≥ 10 → hand-vetted | **21** |
+
+Sanity check on the 43 known TOIs (CP/KP/PC/APC) on sample stars: 19 are
+recovered by period, with a median classifier score of 0.89; the misses are
+mostly long periods and depths near 1,000 ppm.
+
+**Hand-vetting** ([sheets](results/s0105/sheets/), verdicts in
+[`hand_vetting.csv`](results/s0105/hand_vetting.csv)):
+
+| verdict | n | |
+|---|---|---|
+| known single-transit CTOI, new transit | 2 | TIC 7145074, TIC 409696823 |
+| false positive: blend / eclipsing binary | 7 | incl. TIC 139526205 (below) |
+| stellar variability | 4 | rotation / pulsation troughs |
+| noise or systematics | 7 | outlier-driven folds, ramps, bad stretches |
+| inconclusive, too weak for a CTOI | 1 | TIC 469933683 |
+
+* **TIC 7145074**: a clean 5,200 ppm, 3.8 h lone transit at BTJD 4217.50.
+  The star already hosts CTOI 7145074.01, a WINE single transit at BTJD 2111.52
+  (4,000 ppm). If it is the same body, sector 105 caught a second transit
+  2,106 d later, so P = 2,106 / n days. Worth passing to the CTOI owners.
+* **TIC 409696823**: a 5,100 ppm, 1.7 h lone dip at BTJD 4215.21 on a star with
+  a TSTPC single-transit CTOI (BTJD 3142.37, 10,700 ppm, 2.7 h). Depth and
+  duration disagree, so it may not be the same object.
+* **TIC 139526205** shows why the centroid check earns its place: the best
+  periodic signal in the sector (P = 2.923 d, 4,700 ppm, SNR 44, "5.4 R⊕")
+  moves the centroid by 22σ. QLP sectors 3 and 30 show the same period at
+  5.7 to 6.4% depth with an odd/even difference and a > 1 px offset: an
+  eclipsing binary next door, diluted in sector 105. The classifier gave it 0.03.
+
+Duplicate checks run: ExoFOP TOI and CTOI tables (by TIC and period), SPOC TCE
+catalogues on MAST (sector 105 and the sectors 1 to 96 multi-sector run). The
+T16 and transformer-search (Salinas et al. 2025) tables, VizieR, the NASA
+Exoplanet Archive and TEV are not reachable from this environment, so they were
+not checked; none of the 21 needed it after hand-vetting. (T16 light curves
+are on MAST as an HLSP, which makes a later cross-check possible.)
+
+### What week 3 taught
+
+* **Recent-sector data are rough.** Sector 105's second orbit is far noisier
+  than its first for many stars, and both orbits start with ramps. 90% of all
+  detections were sector-wide systematics, which only a cross-star filter
+  (many stars dipping at the same time) removes; per-star vetting cannot.
+* **An eclipsing binary's secondary looks like a second planet.** The first
+  run masked "other signals" before vetting, which hid the secondary of every
+  EB found twice. Never mask harmonics of the signal being vetted.
+* **Training labels shape what a classifier can say.** TOI dispositions teach
+  planet vs astrophysical false positive, not signal vs noise.
+
+### Reproduce week 3
+
+```bash
+pip install -e .[dev,ml]
+python scripts/fetch_week3_data.py      # s75 hosts + field stars, ~4,500 training light curves (~3 GB)
+python scripts/build_training_set.py    # views + vetting features -> data/training/
+python scripts/week3_train.py 5         # baselines + CNN ensembles -> results/classifier/
+python scripts/week3_vet_s75.py         # vetting on known sector-75 signals
+python scripts/week3_single_inject.py 6 # single-transit injections
+python scripts/week3_single_tois.py     # single-transit TOIs in sector 75
+python scripts/tic_params.py 105        # TIC parameters for the QLP sector-105 target list
+python scripts/s105_targets.py          # pick + download the M/K dwarf sample (~11 GB)
+python scripts/week3_hunt.py 105        # full pipeline (~1 h on 4 cores)
+python scripts/week3_score.py 105       # systematics filter, classifier, cross-matches
+python scripts/week3_sheets.py 105      # vetting sheets for the hand-vet list
+```
+
+## Week 2: measure it
 
 Week 2 answers "how good is this pipeline, and why does it miss what it misses?"
 with injection-recovery, recall on every known TOI in the sector, a
@@ -244,14 +438,20 @@ src/exohunt/
   bench.py       stars/s for TLS vs BLS CPU vs BLS CUDA
   crossmatch.py  period/epoch matching with aliases
   pipeline.py    parallel per-sector runner
-  plots.py       raw -> detrended -> periodogram -> folded figure
+  plots.py       raw -> detrended -> periodogram -> folded figure; vetting sheets
+  vetting.py     masked detrend + odd/even, secondary, centroid, dumps, shape, edges
+  views.py       global / local folded views, ephemeris re-centring
+  labels.py      ExoFOP-labelled TOIs, star-level split, training downloads
+  classify/      scalar features, two-tower CNN, ensembles
+  search/single.py  single-event (lone transit) detector
+  hunt.py        full per-star pipeline: detrend, BLS, single events, vetting, views
 ```
 
 ## Plan
 
 1. ~~Week 1: rediscover known planets on one sector (CPU TLS)~~
 2. ~~Week 2: injection-recovery harness, known-TOI recall, own BLS with CUDA kernel (41× TLS on an RTX 4050)~~ (vetting moves to week 3)
-3. Week 3: vetting (odd/even, secondary, centroid, momentum dumps), AstroNet-style CNN on ExoFOP dispositions, recent sectors, single-transit / long-period detector
+3. ~~Week 3: vetting, CNN on ExoFOP dispositions (AUC 0.935 vs 0.79 for BLS stats), single-transit detector, sector 105 search (no new candidate)~~
 4. Week 4: portfolio page and any CTOI submission
 
 ## Data credits

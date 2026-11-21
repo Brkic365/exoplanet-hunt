@@ -33,7 +33,7 @@ def mask_transits(lc: LightCurve, det: Detection, width: float = 2.0) -> LightCu
     """Remove points within `width` x duration of each transit of `det`."""
     phase = ((lc.time - det.t0 + 0.5 * det.period) % det.period) - 0.5 * det.period
     keep = np.abs(phase) > 0.5 * width * det.duration
-    return LightCurve(lc.tic, lc.time[keep], lc.flux[keep], lc.flux_err[keep], list(lc.sectors), dict(lc.meta))
+    return lc.subset(keep)
 
 
 def iterative_search(

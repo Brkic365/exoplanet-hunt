@@ -93,3 +93,73 @@ def recall_curve_figure(curves: dict, out: Path, xlabel: str = "expected SNR", t
     out.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(out, dpi=130)
     plt.close(fig)
+
+
+def vet_sheet(raw, eph, metrics: dict, out, title: str = "") -> None:
+    """One-page vetting sheet: raw flux, detrended flux with events marked,
+    folded transit with odd/even, secondary window, centroid motion."""
+    import matplotlib
+
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+
+    from .vetting import masked_detrend, phase_days, epoch_index
+
+    flat = masked_detrend(raw, eph)
+    P, D = eph.period, eph.duration
+    ph = phase_days(flat.time, eph)
+    fig = plt.figure(figsize=(11, 8))
+    gs = fig.add_gridspec(3, 3, height_ratios=[1, 1, 1.2])
+    a = fig.add_subplot(gs[0, :])
+    a.plot(raw.time, raw.flux, ",", color="0.4")
+    a.set_ylabel("raw flux")
+    b = fig.add_subplot(gs[1, :], sharex=a)
+    b.plot(flat.time, flat.flux, ",", color="0.3")
+    tc = eph.t0 + P * np.arange(np.floor((raw.time.min() - eph.t0) / P), np.ceil((raw.time.max() - eph.t0) / P) + 1)
+    for x in tc:
+        if raw.time.min() <= x <= raw.time.max():
+            b.axvline(x, color="C3", alpha=0.3, lw=3)
+    for x in raw.meta.get("dump_times", []):
+        b.axvline(x, color="C0", alpha=0.4, lw=0.8, ls=":")
+    b.set_ylabel("detrended")
+    b.set_xlabel("BTJD (red: transits, blue dotted: momentum dumps)")
+    w = min(3 * D, 0.5 * P)
+    c = fig.add_subplot(gs[2, 0])
+    m = np.abs(ph) < w
+    ep = epoch_index(flat.time, eph)
+    c.plot(ph[m] * 24, flat.flux[m], ".", ms=2, color="0.6")
+    for par, col, lab in ((1, "C1", "odd"), (0, "C2", "even")):
+        mm = m & (ep % 2 == par)
+        if mm.sum() > 10:
+            bins = np.linspace(-w, w, 41)
+            idx = np.digitize(ph[mm], bins)
+            yb = [np.median(flat.flux[mm][idx == k]) if (idx == k).any() else np.nan for k in range(1, len(bins))]
+            c.plot(0.5 * (bins[1:] + bins[:-1]) * 24, yb, "-", color=col, label=lab)
+    c.legend(fontsize=7)
+    c.set_xlabel("hours from mid-transit")
+    c.set_title(f"depth {metrics.get('depth', np.nan) * 1e6:.0f} ppm, SNR {metrics.get('snr', np.nan):.1f}", fontsize=9)
+    d = fig.add_subplot(gs[2, 1])
+    if P < 1e3:
+        d.plot(ph / P, flat.flux, ",", color="0.4")
+        d.set_xlabel("phase")
+        d.set_title(f"full orbit, sec SNR {metrics.get('sec_snr', np.nan):.1f} at phase {metrics.get('sec_phase', np.nan):.2f}", fontsize=9)
+    else:
+        mm = np.abs(ph) < 1.5
+        d.plot(ph[mm] * 24, flat.flux[mm], ".", ms=2, color="0.4")
+        d.set_xlabel("hours from event")
+        d.set_title("+-1.5 d around the event", fontsize=9)
+    e = fig.add_subplot(gs[2, 2])
+    if flat.cx is not None:
+        mm = np.abs(ph) < w
+        e.plot(ph[mm] * 24, flat.cx[mm] - np.nanmedian(flat.cx[mm]), ".", ms=2, label="x")
+        e.plot(ph[mm] * 24, flat.cy[mm] - np.nanmedian(flat.cy[mm]), ".", ms=2, label="y")
+        e.axvspan(-12 * D, 12 * D, color="C3", alpha=0.1)
+        e.legend(fontsize=7)
+    e.set_title(f"centroid, {metrics.get('centroid_sigma', np.nan):.1f} sigma, offset {metrics.get('centroid_offset_px', np.nan):.2f} px",
+                fontsize=9)
+    e.set_xlabel("hours from mid-transit")
+    fig.suptitle(title, fontsize=10)
+    fig.tight_layout()
+    Path(out).parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(out, dpi=110)
+    plt.close(fig)
