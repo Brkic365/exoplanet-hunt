@@ -17,6 +17,77 @@ example per cell, the scoreboard, and the 21 hand-vetted sector-105 signals with
 their vetting sheets. Data comes from [`scripts/week4_export.py`](scripts/week4_export.py);
 see [`site/README.md`](site/README.md) to run it or move it into another site.
 
+## Sectors 90 to 104: M and K dwarfs
+
+The full pipeline (detrend, periodic BLS, single-transit detector, vetting,
+systematics filter, CNN + GBM classifier with the noise class) run on every
+QLP M and K dwarf in sectors 90 to 104, with the same cuts as sector 105. It ran
+on a laptop (Ryzen 7 7735HS, RTX 4050) in about 15 hours.
+
+**Headline:** 252,054 stars searched → 126,513 signals → 2,774 that pass vetting
+and the systematics filter → 652 at SNR ≥ 10 on stars with no TOI and no
+period match to any CTOI or SPOC TCE → 51 top tier (63 sheets hand-vetted,
+including some on CTOI/TCE hosts) → **8 new candidates** (2 periodic, 6 single
+transits), plus weak ones. All of them are candidates, not planets.
+
+| TIC | sector | kind | P (d) | depth | Rp (R⊕) | T | notes |
+|---|---|---|---|---|---|---|---|
+| 99412936 | 92 | periodic | 9.068 or 18.137 | 6,400 ppm | 7.3 | 11.4 | two clean flat-bottomed transits 18.14 d apart, middle epoch in the gap |
+| 278708716 | 95 | periodic | 8.603 | 2,500 ppm | 4.5 | 11.6 | three transits, no odd/even or secondary |
+| 402710280 | 102 | single | — | 1,500 ppm | 3.4 | 9.2 | clean 5 h transit on a bright K dwarf |
+| 219413978 | 98 | single | — | 1.0% | 9 | 11.4 | clean 9 h flat-bottomed transit; a partial dip in sector 94 at a gap edge could be a second (P = 124.5/n d) |
+| 307361219 | 96 | single | — | 2,800 ppm | 5.1 | 10.8 | clean 2.5 h dip |
+| 124751008 | 98 | single | — | 3,000 ppm | 5.6 | 10.2 | clean, but TIC Teff and radius disagree |
+| 293504894 | 97 | single | — | 1.7% | 10 | 11.9 | slightly V-shaped, EB as likely as a planet |
+| 157843766 | 91 | single | — | 8,100 ppm | 12 | 11.5 | short and V-shaped, grazing EB likely |
+
+Weak: TIC 122503688 (P = 17.28 d, 1,570 ppm), 428079143 (P = 4.258 d, 820 ppm,
+T = 9.2), 241928959 (P = 3.53 d, M dwarf), 211380233 / 325791151 (single dips
+with centroid shifts of about 4σ). Known, but possibly a new transit: TIC 67599025
+(sector 104, 5,600 ppm single on a star with a WINE single-transit CTOI of the
+same depth).
+
+Everything else in the top tier was an eclipsing binary (often only visible
+through a secondary eclipse at the same period), a star that already has a CTOI
+or TCE at another period, scattered light, or QLP aperture switches.
+Verdicts with reasons: [`results/multi/hand_vetting.csv`](results/multi/hand_vetting.csv);
+sheets: [`results/multi/sheets/`](results/multi/sheets/); every candidate with all
+vetting columns: [`results/multi/candidates.csv`](results/multi/candidates.csv);
+per-sector numbers: [`results/multi/funnel_by_sector.csv`](results/multi/funnel_by_sector.csv)
+and `results/s00NN/`.
+
+**What this run taught**
+
+* **"Periodic" deep signals are often one event.** BLS happily fits a period to a
+  single deep eclipse when the other epochs fall in gaps; about a third of the
+  periodic signals I hand-vetted were that. The classifier scores them high.
+* **A period mismatch on a known host is usually the known signal.** Single
+  events and 4× aliases (TIC 269593126 vs a SPOC TCE at 11.88 d) slip past the
+  period cross-match, so the ranking now drops stars with any CTOI or TCE out of
+  the top tier.
+* **Secondary eclipses look like single transits.** TIC 259373684's two
+  "single transits" in sectors 97 and 98 are the phase-0.71 secondary of a 43.4 d
+  eccentric EB whose 3% primaries are in the same light curves. The next step is
+  to check every single event against the star's other dips.
+* **The Galactic bulge (sector 93) times out MAST.** `sector_sample.py` splits
+  cones that fail into seven smaller ones.
+* **The GPU doesn't matter end to end.** BLS is under 5% of the per-star time;
+  downloading (about 5 files/s) and detrending dominate, so the run uses the CPU
+  BLS on 10 processes. Light curves are streamed and deleted unless a signal
+  passes vetting, so a sector never needs its 11 GB on disk.
+
+Reproduce:
+
+```bash
+python scripts/fetch_catalogs.py 90 91 ... 104   # CTOIs, all SPOC TCE files, QLP target lists
+python scripts/build_noise_set.py && python scripts/build_noise_set_mk.py   # classifier noise class
+for s in 90 ... 104:
+    python scripts/sector_sample.py $s           # M/K dwarf sample (reproduces sector 105's 15,511 exactly)
+    python scripts/stream_hunt.py $s             # download + hunt, keeps only vetted light curves
+    python scripts/week3_score.py $s             # systematics, classifier, cross-matches
+python scripts/multi_rank.py 90 ... 105          # combined ranking + sheets
+```
+
 ## Week 3: vet, classify, search a recent sector
 
 Week 3 adds the last two pipeline stages (automatic vetting and a classifier),
