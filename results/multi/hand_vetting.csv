@@ -1,0 +1,67 @@
+sector,tic,kind,period_d,verdict,reason
+97,259373684,single,,false positive (eccentric EB),"~3,000 ppm, 3 h dips at BTJD 3971.25 (S97) and 4014.63 (S98), 43.38 d apart. The same star shows 3% eclipses at 3940.6, 3984.0 and 4027.3, also 43.4 d apart: the shallow dips are the secondary eclipse at phase 0.71 of an eccentric EB. SPOC TCEs at 21.687 d (3.7% and 0.4%) confirm the EB."
+98,259373684,single,,false positive (eccentric EB),Second secondary eclipse of the same EB (see sector 97). SPOC TCEs at 21.687 d (3.7% and 0.4%) confirm the EB.
+95,278708716,periodic,8.6031,candidate,"2,500 ppm, ~3.5 h, three transits at P = 8.603 d, flat out of transit, no odd/even difference, no secondary (SNR 3.3), centroid 1.5 sigma. Rp ~4.5 Re on a K dwarf (T = 11.6)."
+97,269593126,periodic,2.9552,weak candidate (SPOC TCE at 4x period),"680 ppm, SNR 12 at P = 2.955 d, Rp ~2.4 Re, T = 11.0. SPOC has a weak TCE (SNR 7) at 11.879 d = 4.02 x our period, likely the same signal at an alias, so not new."
+97,122503688,periodic,17.2823,weak candidate,"1,570 ppm, SNR 11.7, three transits at P = 17.28 d, Rp ~3.5 Re (T = 11.1). Fold marginal; secondary SNR 5.1 is a mild worry."
+100,308820098,periodic,9.8776,known CTOI/TCE (EB),Star hosts a CTOI at P = 16.86 d and SPOC TCEs with 24% depth: a known eclipsing binary.
+100,1522470,periodic,1.6033,noise,"2,500 ppm at SNR 10.7 on a faint M dwarf (T = 12.8); fold not convincing."
+97,175532957,periodic,5.8292,noise,"6,650 ppm at SNR 10.8 on a faint, noisy M dwarf (T = 13.3); no convincing dip in the fold."
+95,469974264,periodic,8.1493,known CTOI,Star hosts a TSTPC single-transit CTOI and deep SPOC TCEs (4.5-11%): stellar companion.
+101,57259281,periodic,7.244,single event (likely EB),"One 1.5% event (BTJD 4105.7), the other epochs in gaps. 16 Re on a 1.2 Rsun star: likely EB or brown dwarf."
+101,305762557,periodic,7.3031,single event (likely EB),"One 4.3% event (BTJD 4121.8), the other epochs in gaps. 17.5 Re: likely stellar companion."
+104,339548167,periodic,6.9225,false positive (EB),3% primary plus a secondary eclipse at phase 0.28 (SNR 11): eccentric EB.
+96,350139008,periodic,3.5668,false positive (eccentric EB),Same star as the sector-97 signal: 1.4% primaries 14.27 d apart with secondaries at phase 0.75.
+97,350139008,periodic,14.2692,false positive (eccentric EB),Four 1.3% primaries at P = 14.27 d and secondary eclipses at phase 0.75 (SNR 12).
+99,448471716,periodic,7.71,known CTOI,"Star hosts a TSTPC single-transit CTOI (7,750 ppm) and a SPOC TCE at 11.6 d."
+96,120429951,periodic,11.4205,systematics,"Signal comes from a noisy stretch of scattered light at BTJD 3925-3927; centroid 9.8 sigma, 1.5 px offset."
+95,211380233,single,,known CTOI/TCE,"Star hosts a CTOI and SPOC TCEs at P ~4.6 d (4,000-9,000 ppm); this dip is probably one of those transits."
+95,277714216,single,,systematics,Sits on the recovery from a ramp at the start of the orbit.
+95,31998875,single,,stellar variability,"16 h wide shallow trough, same size as the surrounding wiggles."
+96,307361219,single,,single-transit candidate,"Clean 2,800 ppm, 2.5 h dip mid-orbit on a K dwarf (T = 10.8), SNR 14, centroid 0.7 sigma. Rp ~5 Re."
+96,804804889,single,,systematics,Inside a scattered-light stretch.
+97,293504894,single,,single-transit candidate (possible EB),"Clean 1.7%, 3 h dip, SNR 44, centroid 0.6 sigma, K dwarf (T = 11.9). Rp ~10 Re; slightly V-shaped, so an EB is as likely as a giant planet."
+98,124751008,single,,single-transit candidate,"Clean 3,000 ppm, 1.5 h dip on a bright star (T = 10.2), SNR 16.8, centroid 0.6 sigma. TIC lists Teff 3,773 K with R* = 0.95 Rsun, which do not fit together; check the star before anything else."
+98,219413978,single,,single-transit candidate,"Clean 1.0%, ~9 h flat-bottomed dip, SNR 75, centroid 0.9 sigma, K dwarf (T = 11.4). Rp ~9 Re; long duration fits a long-period giant planet. Best single event of the run."
+98,247752458,single,,systematics,"Broad trough on the noisy ramp at the start of orbit 1, faint M dwarf."
+98,284677007,single,,systematics,Scattered-light ramp; 6.5% 'dip' is a detrending residual.
+98,302038712,single,,inconclusive,"3,500 ppm, 6 h dip in a stretch with similar wiggles and scattered-light features; centroid 3.3 sigma."
+98,358108061,single,,systematics,Strong scattered-light features every orbit.
+98,394656878,single,,systematics,Next to a data gap and a ramp.
+98,408165901,single,,systematics,"At a flare / data gap edge, only ingress covered."
+98,7391178,single,,systematics,Light curve dominated by scattered light.
+99,123222370,single,,false positive (known EB),"Neighbouring TIC 123222371 shows the same event; SPOC TCEs at 8.966 d with 9,000 / 5,000 ppm alternating depths: known EB."
+99,123222371,single,,false positive (likely blend),Same event as TIC 123222370 (close pair).
+99,189407474,single,,false positive (EB),25% primary at 4050.3 and 6% secondary at 4066.6.
+99,325791151,single,,weak single candidate,"4,800 ppm, 3 h dip, SNR 16.6, T = 11.4 K dwarf; centroid 4.7 sigma and a small flux jump nearby."
+99,71222021,single,,noise,A single low point.
+100,117934978,single,,systematics,Residual next to large scattered-light dips.
+100,333013007,single,,stellar variability,"Broad trough on a faint, noisy M dwarf."
+101,324850553,single,,noise,"Very faint star, 8% scatter."
+101,340291580,single,,stellar variability,40 h trough.
+101,341136511,single,,systematics,After a large ramp at the start of the orbit.
+102,402710280,single,,single-transit candidate,"Clean 1,500 ppm, ~5 h flat-bottomed dip on a bright K dwarf (T = 9.2), SNR 23, centroid 0.3 sigma. Rp ~3.4 Re (sub-Neptune). Best small-planet lead of the run."
+104,11613676,single,,false positive (EB),"Three eclipses of 1.7%, 3% and 4% in one sector."
+104,220496487,single,,false positive (EB / variable),Several eclipse-like dips of different depths on a variable star.
+104,265372308,single,,inconclusive,"3%, 3 h flat-bottomed dip on a spotted M dwarf (T = 12.8), but right next to a data gap and a flux spike at the end of the sector."
+104,365959320,single,,systematics,Recovery from a large scattered-light ramp.
+104,67599025,single,,known CTOI,"Star already hosts a CTOI from WINE: single transit of 5,700 ppm (another in sector 30). Our sector-104 event (5,600 ppm) is very likely another transit of it."
+105,71334210,periodic,3.1739,noise,From the sector-105 hand-vetting: driven by a few low points at segment edges.
+105,409696823,single,,known CTOI (new transit?),From the sector-105 hand-vetting.
+105,7145074,single,,known CTOI (new transit),From the sector-105 hand-vetting.
+92,99412936,periodic,9.0683,candidate,"Two clean 6,400 ppm, ~3 h flat-bottomed transits at BTJD 3807.2 and 3825.4 (18.14 d apart; the epoch between falls in the orbit gap, so P = 9.07 or 18.14 d). K dwarf (T = 11.4), Rp ~7.3 Re, centroid 2.7 sigma, no secondary. Best periodic lead of the run."
+92,428079143,periodic,4.2580,weak candidate,"820 ppm at P = 4.258 d (5 transits), Rp ~2.7 Re on a bright spotted K dwarf (T = 9.2); classifier 0.92. Individual transits not visible; centroid 2.8 sigma but a 0.5 px offset."
+92,241928959,periodic,3.5315,weak candidate,"1% at P = 3.53 d on a flaring M dwarf (T = 12.6), SNR 15; fold shows a dip but centroid 4.3 sigma."
+94,219413978,periodic,6.6043,possible second transit,"Partial 6,500 ppm dip at BTJD 3875.6 right at a gap edge and momentum dump; the 'period' is not real. If it is the same body as the clean sector-98 single (BTJD 4000.14), P = 124.5/n d. Unreliable on its own."
+94,350139008,periodic,,false positive (eccentric EB),"Same EB as sectors 96 and 97."
+91,157843766,single,,single-transit candidate (possible EB),"Clean 8,100 ppm, ~1.3 h V-shaped dip on a 1.2 Rsun star (T = 11.5), SNR 17, centroid 0.7 sigma. Short and V-shaped for a single transit: grazing EB is likely."
+91,187277871,single,,noise,"Light curve full of downward outliers (flares / systematics)."
+91,365153763,single,,systematics,"Inside a stretch of scattered light at the start of the sector."
+91,432236759,single,,inconclusive,"3,700 ppm, 6 h dip on an evolved star (R* = 1.9 Rsun) near a noisy segment."
+92,267648071,single,,systematics,"Last hours of the sector, 3% scatter."
+92,270252752,single,,noise,"Faint M dwarf, dip comparable to scatter."
+92,53665006,single,,systematics,"Two flux levels after a ramp (QLP aperture switch)."
+92,6910790,single,,systematics,"Two flux levels (aperture switch)."
+92,77022579,single,,inconclusive,"7,400 ppm dip on a subgiant (R* = 2.15 Rsun), noisy, SNR 16."
+92,77117588,single,,systematics,"Right after a large flare / data glitch."
+93,369375360,periodic,7.6537,single event (likely EB),"One 2.7% V-shaped event at BTJD 3834.7; the next epoch falls on a small gap, so the period is not secured. Rp ~14 Re: likely stellar."
