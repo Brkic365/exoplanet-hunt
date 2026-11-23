@@ -33,8 +33,8 @@ transits), plus weak ones. All of them are candidates, not planets.
 | TIC | sector | kind | P (d) | depth | Rp (R⊕) | T | notes |
 |---|---|---|---|---|---|---|---|
 | 99412936 | 92 | periodic | 9.068 or 18.137 | 6,400 ppm | 7.3 | 11.4 | two clean flat-bottomed transits 18.14 d apart, middle epoch in the gap |
-| 278708716 | 95 | periodic | 8.603 | 2,500 ppm | 4.5 | 11.6 | three transits, no odd/even or secondary |
-| 402710280 | 102 | single | — | 1,500 ppm | 3.4 | 9.2 | clean 5 h transit on a bright K dwarf |
+| 278708716 | 95 | periodic | 17.214 (follow-up) | 2,500 ppm | 4.5 | 11.6 | transits in sectors 28, 68 and 95; the 8.603 d found in S95 is half the period |
+| 402710280 | 102 | single → 3 transits | 36.3 to 290.7 (5 aliases) | 1,500 ppm | 3.4 | 9.2 | clean 5 h transit on a bright K dwarf; follow-up found the same transit in sectors 39 and 93 |
 | 219413978 | 98 | single | — | 1.0% | 9 | 11.4 | clean 9 h flat-bottomed transit; a partial dip in sector 94 at a gap edge could be a second (P = 124.5/n d) |
 | 307361219 | 96 | single | — | 2,800 ppm | 5.1 | 10.8 | clean 2.5 h dip |
 | 124751008 | 98 | single | — | 3,000 ppm | 5.6 | 10.2 | clean, but TIC Teff and radius disagree |
@@ -55,6 +55,26 @@ sheets: [`results/multi/sheets/`](results/multi/sheets/); every candidate with a
 vetting columns: [`results/multi/candidates.csv`](results/multi/candidates.csv);
 per-sector numbers: [`results/multi/funnel_by_sector.csv`](results/multi/funnel_by_sector.csv)
 and `results/s00NN/`.
+
+**Follow-up of the four leads in every other QLP sector**
+([`scripts/followup.py`](scripts/followup.py), [`results/followup/`](results/followup/),
+draft CTOI fields in [`ctoi_draft.csv`](results/followup/ctoi_draft.csv)):
+
+* **TIC 402710280**: two more transits of the same depth and duration in
+  sectors 39 and 93, so three in all (BTJD 2384.60, 3838.18, 4128.95).
+  The sector-93 one was found by the hunt but failed vetting on a centroid
+  shift measured with a bogus BLS period; measured as a single event, the
+  centroid is 2σ. Coverage in five other sectors leaves P = 36.34, 72.68,
+  96.91, 145.36 or 290.72 d. That makes it a ~3.4 R⊕ sub-Neptune candidate
+  on a T = 9.2 K dwarf, with Gaia RUWE 1.00 and no TOI, CTOI or TCE.
+* **TIC 278708716**: the true period is **17.214 d**, not 8.607 d. Every
+  odd-numbered 8.607 d epoch is covered and flat in sectors 1, 28 and 68.
+  Transits in sectors 28, 68 and 95 fit a linear ephemeris to 0.4 h.
+* **TIC 99412936**: sector 92 is its only TESS sector, so P stays 9.07 or 18.14 d.
+* **TIC 219413978**: no second 1% transit in eight other sectors; still a single.
+
+Gaia DR3 shows RUWE 0.9 to 1.0 for all four, and no neighbour within 40″
+brighter than ΔG = 4. A fresh ExoFOP download (2026-11-23) has no TOI or CTOI on any of them.
 
 **What this run taught**
 
